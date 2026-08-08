@@ -7,40 +7,28 @@
 local _realG = getfenv()
 local _hookedG = {}
 local _traced = {}
-
-local function log_call(name, args)
-    local arg_strs = {}
-    for i, v in pairs(args) do
-        table.insert(arg_strs, type(v) == "string" and '"'..tostring(v)..'"' or tostring(v))
-    end
-    print("[DEOBF] Called: " .. tostring(name) .. "(" .. table.concat(arg_strs, ", ") .. ")")
-end
-
 setmetatable(_hookedG, {
     __index = function(self, key)
-        local val = _realG[key]
-        if type(val) == "function" then
-            return function(...)
-                local args = {...}
-                log_call(key, args)
-                return val(...)
+        if key == "loadstring" then
+            local function loadstring_hook(c)
+                print("[DEOBF] *** LOADSTRING INTERCEPTED ***")
+                print(c)
+                return _realG.loadstring(c)
             end
+            if newcclosure then return newcclosure(loadstring_hook) else return loadstring_hook end
+        elseif key == "getfenv" then
+            local function getfenv_hook(lvl)
+                return _hookedG
+            end
+            if newcclosure then return newcclosure(getfenv_hook) else return getfenv_hook end
         end
-        return val
+        return _realG[key]
     end,
     __newindex = function(self, key, value)
-        print("[DEOBF] Set Global: " .. tostring(key) .. " = " .. tostring(value))
         _realG[key] = value
     end
 })
 
--- 2. Hook critical functions
-_hookedG.getfenv = function() return _hookedG end
-_hookedG.loadstring = function(c) 
-    print("[DEOBF] *** LOADSTRING INTERCEPTED ***")
-    print(c)
-    return loadstring(c)
-end
 
 -- 3. Execute original script in hooked environment
 setfenv(1, _hookedG)
