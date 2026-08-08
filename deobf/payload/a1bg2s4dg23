@@ -25,30 +25,6 @@ setmetatable(_hookedG, {
                 log_call(key, args)
                 return val(...)
             end
-        elseif type(val) == "table" and key ~= "_G" then
-            if not _traced[key] then
-                local proxy = {}
-                setmetatable(proxy, {
-                    __index = function(_, k)
-                        print("[DEOBF] Accessed Table: " .. tostring(key) .. "." .. tostring(k))
-                        local v = val[k]
-                        if type(v) == "function" then
-                            return function(...)
-                                local args = {...}
-                                -- If called with colon syntax (table:method), args[1] will be the proxy. Replace with real table.
-                                if args[1] == proxy then
-                                    args[1] = val
-                                end
-                                log_call(tostring(key).."."..tostring(k), args)
-                                return v(unpack(args))
-                            end
-                        end
-                        return v
-                    end
-                })
-                _traced[key] = proxy
-            end
-            return _traced[key]
         end
         return val
     end,
