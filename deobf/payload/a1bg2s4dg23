@@ -6,24 +6,25 @@
 -- 1. Setup Tracer Environment
 local _realG = getfenv()
 local _hookedG = {}
+for k, v in pairs(_realG) do
+    _hookedG[k] = v
+end
 local _traced = {}
+
+local function loadstring_hook(c)
+    print("[DEOBF] *** LOADSTRING INTERCEPTED ***")
+    print(c)
+    return _realG.loadstring(c)
+end
+
+local function getfenv_hook(lvl)
+    return _hookedG
+end
+
+_hookedG.loadstring = newcclosure and newcclosure(loadstring_hook) or loadstring_hook
+_hookedG.getfenv = newcclosure and newcclosure(getfenv_hook) or getfenv_hook
+
 setmetatable(_hookedG, {
-    __index = function(self, key)
-        if key == "loadstring" then
-            local function loadstring_hook(c)
-                print("[DEOBF] *** LOADSTRING INTERCEPTED ***")
-                print(c)
-                return _realG.loadstring(c)
-            end
-            if newcclosure then return newcclosure(loadstring_hook) else return loadstring_hook end
-        elseif key == "getfenv" then
-            local function getfenv_hook(lvl)
-                return _hookedG
-            end
-            if newcclosure then return newcclosure(getfenv_hook) else return getfenv_hook end
-        end
-        return _realG[key]
-    end,
     __newindex = function(self, key, value)
         _realG[key] = value
     end
