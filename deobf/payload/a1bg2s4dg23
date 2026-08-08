@@ -35,9 +35,12 @@ setmetatable(_hookedG, {
                         if type(v) == "function" then
                             return function(...)
                                 local args = {...}
-                                table.remove(args, 1) -- remove 'self'
-                                log_call(tostring(key)..":"..tostring(k), args)
-                                return v(val, unpack(args))
+                                -- If called with colon syntax (table:method), args[1] will be the proxy. Replace with real table.
+                                if args[1] == proxy then
+                                    args[1] = val
+                                end
+                                log_call(tostring(key).."."..tostring(k), args)
+                                return v(unpack(args))
                             end
                         end
                         return v
